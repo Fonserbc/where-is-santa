@@ -82,13 +82,21 @@
 	var gameTime = lastTime / 1000;
 	
 
+	/** LOAD **/
+	var blurImage = new Image();
+	blurImage.src = "res/blur.png";
+	var background = new Image();
+	background.src = "res/santa-00.png";
+	var overlay = new Image();
+	overlay.src = "res/santa-07.png";
+
 	/** INIT **/
 
-	ctxBack.fillStyle = "#000000";
-	ctxBack.fillRect (0, 0, WIDTH, HEIGHT);
+	ctxBack.clearRect (0, 0, WIDTH, HEIGHT);
+	ctxBack.drawImage (background, 0, 0);
 
 	ctxFront.fillStyle = "#DDDDFF";
-	ctxFront.fillRect (0, 0, WIDTH, HEIGHT);
+	ctxFront.drawImage(blurImage, 0, 0);
 	/*
 	ctxFront.fillStyle = "#000000";
 	ctxFront.globalCompositeOperation = "destination-out";
@@ -172,8 +180,7 @@
 
 	function draw() {
 		// Window
-		ctxFront.fillStyle = "#DDDDFF";
-		ctxFront.fillRect (0, 0, WIDTH, HEIGHT);
+		ctxFront.drawImage(blurImage, 0, 0);
 
 		ctxFront.globalCompositeOperation = "destination-out";
 
@@ -193,6 +200,11 @@
 		}
 
 		ctxFront.globalCompositeOperation = "source-over";
+
+		ctxFront.drawImage(overlay, 0,0);
+
+		// Background
+		ctxBack.drawImage(background, 0, 0);
 	}
 
 	function loop () {

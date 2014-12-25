@@ -16,7 +16,7 @@
 
 		canvas#frontCanvas {
 			z-index: 2;
-			opacity:0.7;
+			//opacity:0.7;
 		}
 
 		canvas#snowCanvas {
@@ -80,15 +80,52 @@
 
 	var lastTime = Date.now();
 	var gameTime = lastTime / 1000;
+	var finished = false;
+	var finishedTime = 0;
 	
 
-	/** LOAD **/
+	/** RES LOAD **/
 	var blurImage = new Image();
 	blurImage.src = "res/blur.png";
 	var background = new Image();
 	background.src = "res/santa-00.png";
 	var overlay = new Image();
 	overlay.src = "res/santa-07.png";
+	var layers = [];
+	layers.push(new Image());
+	layers[0].src = "res/santa-01.png";
+	layers.push(new Image());
+	layers[1].src = "res/santa-02.png";
+	var santa = new Image();
+	santa.src = "res/santa-06.png";	
+	var spriteSheet = new Image();
+	spriteSheet.src = "res/santa-09.png"
+	var sprites = {};
+	sprites["santa0"] = {
+		sx: 0,
+		sy: 34,
+		width: 464,
+		height: 600,
+		x: WIDTH - 464 + 50,
+		y: 20
+	}
+	sprites["santa1"] = {
+		sx: 464 + 38,
+		sy: 34,
+		width: 464,
+		height: 600,
+		x: WIDTH - 464 + 50,
+		y: 20
+	}
+	sprites["hohoho"] = {
+		sx: 370,
+		sy: 746,
+		width: 338,
+		height: 248,
+		x: 30,
+		y: 10
+	}
+
 
 	/** INIT **/
 
@@ -97,19 +134,15 @@
 
 	ctxFront.fillStyle = "#DDDDFF";
 	ctxFront.drawImage(blurImage, 0, 0);
-	/*
-	ctxFront.fillStyle = "#000000";
-	ctxFront.globalCompositeOperation = "destination-out";
-	ctxFront.fillRect ( 10,10, 200, 200);*/
 
 	// Snow
 	ctxSnow.clearRect(0, 0, WIDTH, HEIGHT);
 
-	//Remove positions
+	// Remove positions
 	var fingerings = [];
 	var fingerIt = 0;
 	var FINGER_TIME = 1.7;
-	var FINGER_RADIUS = 20;
+	var FINGER_RADIUS = 30;
 	for (var i = 0; i < 256; ++i) {
 		fingerings.push({
 			x: 0,
@@ -117,6 +150,48 @@
 			t: 0
 		});
 	}
+	var fingerHit = 0;
+	var hit = false;
+	var hitTime = 0;
+	var hitFactor = 0;
+
+	// Santas
+	var santas = [{
+		layer: 1,
+		x: WIDTH/2,
+		y: HEIGHT/2,
+		dx: 100,
+		dy: 500
+	},
+	{
+		layer: 1,
+		x: 200,
+		y: 430,
+		dx: -200,
+		dy: 0
+	},
+	{
+		layer: 1,
+		x: 370,
+		y: 370,
+		dx: 200,
+		dy: 0
+	},
+	{
+		layer: 1,
+		x: 100,
+		y: 340,
+		dx: 0,
+		dy: 300
+	},
+	{
+		layer: 0,
+		x: 350,
+		y: 530,
+		dx: 0,
+		dy: 100
+	}];
+	var santaIt = 0;
 
 	function mod (a, b) {
     	return a - b * Math.floor(a / b);
@@ -138,6 +213,24 @@
 		for (var i = 0; i < fingerings.length; ++i) {
 			fingerings[i].t -= deltaTime;
 		}
+
+		if (hit) {
+			hitTime -= deltaTime;
+			hitFactor = 1.0 - hitTime;
+
+			if (hitTime < 0) {
+				hit = false;
+				santaIt++;
+				hitFactor = 0.0;
+
+				if (santaIt == santas.length) {// end
+					finished = true;
+					finishedTime = gameTime;
+				}
+			}
+
+		}
+
 	}
 
 
@@ -163,6 +256,11 @@
 		//if (gameTime - lastFingerTime > 0.001) {			
 			var x = ev.offsetX === undefined? ev.layerX : ev.offsetX;
 			var y = ev.offsetY === undefined? ev.layerY : ev.offsetY;
+			if (ev.touches) {
+				var rect = canvas.getBoundingClientRect();
+				x = ev.touches[0].clientX - rect.left;
+				y = ev.touches[0].clientY - rect.top;
+			}
 
 			var f = fingerings[fingerIt];
 			f.x = x;
@@ -173,10 +271,31 @@
 
 		//	lastFingerTime = gameTime;
 		//}
+
+		if (!finished && !hit) {
+			var dx = x - santas[santaIt].x;
+			var dy = y - santas[santaIt].y;
+			if (Math.sqrt(dx*dx + dy*dy) < FINGER_RADIUS) {
+				fingerHit ++;
+
+				if (fingerHit > 1) {
+					fingerHit = 0;
+					hit = true;
+					hitTime = 1.0;
+				}
+			}			
+		}
 	}
 	frontCanvas.addEventListener("mousedown", onmousedown);
 	frontCanvas.addEventListener("mousemove", onmousemove);
 	document.addEventListener("mouseup", onmouseup);
+	frontCanvas.addEventListener("touchstart", onmousedown);
+	frontCanvas.addEventListener("touchmove", onmousemove);
+	document.addEventListener("touchend", onmouseup);
+
+	function drawSprite(sprite, canvas) {
+		canvas.drawImage(spriteSheet, sprite.sx, sprite.sy, sprite.width, sprite.height, sprite.x, sprite.y, sprite.width, sprite.height);
+	}
 
 	function draw() {
 		// Window
@@ -199,12 +318,62 @@
 			}
 		}
 
+		if (finished) {
+			var divisions = 10;
+			var maxSteps = Math.min(divisions*2, ((gameTime - finishedTime)/3) * divisions*2);
+
+			if (maxSteps == divisions*2)
+			ctxFront.strokeStyle = "#FFFFFF";
+      		ctxFront.lineWidth = FINGER_RADIUS*2;
+      		ctxFront.beginPath();
+      		ctxFront.moveTo(0,0);
+
+			var mid = 0;
+      		for (var i = 0; i < maxSteps; ++i) {
+      			mid = i/(divisions*2) * HEIGHT;
+				ctxFront.quadraticCurveTo(i%2 == 0? -WIDTH/3 : WIDTH*1.33, mid, WIDTH/2, mid);
+      		}
+
+			ctxFront.stroke();
+			ctxFront.closePath();
+		}
+
 		ctxFront.globalCompositeOperation = "source-over";
 
 		ctxFront.drawImage(overlay, 0,0);
 
 		// Background
 		ctxBack.drawImage(background, 0, 0);
+
+		for (var i = 0; i < layers.length; ++i) {
+
+			if (!finished && i == santas[santaIt].layer) {
+				ctxBack.drawImage(santa, santas[santaIt].x - santa.width/2 + santas[santaIt].dx*hitFactor, santas[santaIt].y - santa.height/2  + santas[santaIt].dy*hitFactor);
+			}
+
+			ctxBack.drawImage(layers[i], 0, 0);
+		}
+
+		if (finished) {
+			var t = Math.floor((gameTime - finishedTime) / 1.);
+
+			if (t%2 == 0) {
+				drawSprite(sprites["santa0"], ctxBack);				
+			}
+			else {
+				drawSprite(sprites["santa1"], ctxBack);
+			}
+
+			if (t%3 == 0) {
+				drawSprite(sprites["hohoho"], ctxBack);
+			}
+			else if (t%3 == 1) {
+				drawSprite(sprites["hohoho"], ctxBack);
+			}
+			else {
+				drawSprite(sprites["hohoho"], ctxBack);
+			}
+		}
 	}
 
 	function loop () {

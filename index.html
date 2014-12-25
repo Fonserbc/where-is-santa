@@ -3,8 +3,9 @@
 <head>
 	<style> 
 		body {
-			background: #FFFFFF;
-			font-family: "Trebuchet MS", Helvetica, sans-serif
+			background: #000000;
+			font-family: "Trebuchet MS", Helvetica, sans-serif;
+			color: #FFFFFF;
 		}
 
 		canvas {
@@ -16,7 +17,6 @@
 
 		canvas#frontCanvas {
 			z-index: 2;
-			//opacity:0.7;
 		}
 
 		canvas#snowCanvas {
@@ -39,9 +39,14 @@
 			height: 600px;
 		}
 
+		div#footer {
+			margin: 0 auto;
+		}
+
 	</style>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<title>Where is Santa?</title>
+	<link rel="shortcut icon" href="santa.ico" >
 </head>
 <body>
 	<div id="holder">
@@ -91,6 +96,8 @@
 	background.src = "res/santa-00.png";
 	var overlay = new Image();
 	overlay.src = "res/santa-07.png";
+	var lastScene = new Image();
+	lastScene.src = "res/last scene.png";
 	var layers = [];
 	layers.push(new Image());
 	layers[0].src = "res/santa-01.png";
@@ -147,7 +154,7 @@
 	var hitFactor = 0;
 
 	// Santas
-	var IN_TIME = 1.5;
+	var IN_TIME = 3;
 	var santas = [{
 		layer: 1,
 		x: WIDTH/2,
@@ -231,6 +238,10 @@
 		mouseDown = true;
 		firstTime = false;
 
+		if (finished && gameTime - finishedTime > 1.0) {
+			window.open("https://twitter.com/MossOfTheTime");
+		}
+
 		newFinger(ev);
 	}
 
@@ -309,7 +320,11 @@
 		if (finished) {
 			var finishFactor = Math.min(1.0, (gameTime - finishedTime)/IN_TIME);
 
-			ctxFront.clearRect(WIDTH* (1.0 - finishFactor), 0, WIDTH, HEIGHT);
+			ctxFront.beginPath();
+			ctxFront.fillStyle = "rgba(1,1,1,1";
+			ctxFront.arc(WIDTH/2, HEIGHT/2, (WIDTH/2)*(finishFactor), 0, 2 * Math.PI);
+			ctxFront.fill();
+			ctxFront.closePath();
 		}
 		else if (firstTime) {
 			ctxFront.drawImage(word, 0, -30);
@@ -321,7 +336,12 @@
 			ctxFront.drawImage(clickTo, WIDTH/2 - clickTo.width/2, HEIGHT/2 - clickTo.height/2);			
 		}
 
-		ctxFront.drawImage(overlay, 0,0);
+		if (!finished) {
+			ctxFront.drawImage(overlay, 0,0);
+		}
+		else {
+			ctxFront.drawImage(lastScene, 0,0);
+		}
 
 		// Background
 		ctxBack.drawImage(background, 0, 0);

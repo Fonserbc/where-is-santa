@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<style> 
+		body {
+			background: #FFFFFF;
+			font-family: "Trebuchet MS", Helvetica, sans-serif
+		}
+
+		canvas {
+		    display: block;
+		    position: absolute;
+		    left: 0;
+		    top: 0;
+		}
+
+		canvas#frontCanvas {
+			z-index: 2;
+			opacity:0.7;
+		}
+
+		canvas#snowCanvas {
+			z-index: 1;
+		}
+
+		canvas#backCanvas {
+			z-index: 0;
+		}
+
+
+		div#holder {
+			padding-left: 0;
+		    padding-right: 0;
+		    margin-left: auto;
+		    margin-right: auto;
+		    display: block;		    
+			position: relative;
+			width: 600px;
+			height: 600px;
+		}
+
+	</style>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Where is Santa?</title>
+</head>
+<body>
+	<div id="holder">
+		<canvas id="frontCanvas" width="600" height="600">
+			Your browser doesn't appear to support the HTML5 <code>&lt;canvas&gt;</code> element. :(
+		</canvas>
+		<canvas id="snowCanvas" width="600" height="600">
+		</canvas>
+		<canvas id="backCanvas" width="600" height="600">
+		</canvas>
+	</div>
+
+    <script type="text/javascript">
+	window.requestAnimFrame = (function(){
+		return  window.requestAnimationFrame       ||
+			window.webkitRequestAnimationFrame ||
+			window.mozRequestAnimationFrame    ||
+			window.oRequestAnimationFrame      ||
+			window.msRequestAnimationFrame     || //In case not supported, we define the function
+			function(/* function */ callback, /* DOMElement */ element){
+				window.setTimeout(callback, 1000 / 60);
+			};
+	})();
+
+	var canvas;
+	var WIDTH, HEIGHT;
+	WIDTH = HEIGHT = 600;
+
+	var frontCanvas = canvas = document.getElementById("frontCanvas");
+	var backCanvas = document.getElementById("backCanvas");
+	var snowCanvas = document.getElementById("snowCanvas");
+
+	var ctxFront = frontCanvas.getContext("2d");
+	var ctxBack = backCanvas.getContext("2d");
+	var ctxSnow = snowCanvas.getContext("2d");
+
+	var lastTime = Date.now();
+	var gameTime = lastTime / 1000;
+	
+
+	/** LOAD **/
+	var blurImage = new Image();
+	blurImage.src = "res/blur.png";
+	var background = new Image();
+	background.src = "res/santa-00.png";
+	var overlay = new Image();
+	overlay.src = "res/santa-07.png";
+
+	/** INIT **/
+
+	ctxBack.clearRect (0, 0, WIDTH, HEIGHT);
+	ctxBack.drawImage (background, 0, 0);
+
+	ctxFront.fillStyle = "#DDDDFF";
+	ctxFront.drawImage(blurImage, 0, 0);
+	/*
+	ctxFront.fillStyle = "#000000";
+	ctxFront.globalCompositeOperation = "destination-out";
+	ctxFront.fillRect ( 10,10, 200, 200);*/
+
+	// Snow
+	ctxSnow.clearRect(0, 0, WIDTH, HEIGHT);
+
+	//Remove positions
+	var fingerings = [];
+	var fingerIt = 0;
+	var FINGER_TIME = 1.7;
+	var FINGER_RADIUS = 20;
+	for (var i = 0; i < 256; ++i) {
+		fingerings.push({
+			x: 0,
+			y: 0,
+			t: 0
+		});
+	}
+
+	function mod (a, b) {
+    	return a - b * Math.floor(a / b);
+	}
+
+	// Updates
+	function tickTime() {
+		var currTime = Date.now();
+		var delta = Math.min(0.25, (currTime - lastTime)/1000);
+		lastTime = currTime;
+		gameTime += delta;
+		return delta;
+	}
+
+	var deltaTime;
+	function update () {
+		deltaTime = tickTime();
+
+		for (var i = 0; i < fingerings.length; ++i) {
+			fingerings[i].t -= deltaTime;
+		}
+	}
+
+
+	var mouseDown = false;
+	function onmousedown (ev) {
+		mouseDown = true;
+
+		newFinger(ev);
+	}
+
+	function onmouseup (ev) {
+		mouseDown = false;
+	}
+
+	function onmousemove (ev) {
+		if (mouseDown) {
+			newFinger(ev);
+		}
+	}
+
+	var lastFingerTime = 0;
+	function newFinger (ev) {
+		//if (gameTime - lastFingerTime > 0.001) {			
+			var x = ev.offsetX === undefined? ev.layerX : ev.offsetX;
+			var y = ev.offsetY === undefined? ev.layerY : ev.offsetY;
+
+			var f = fingerings[fingerIt];
+			f.x = x;
+			f.y = y;
+			f.t = FINGER_TIME;
+
+			fingerIt = mod(fingerIt + 1, fingerings.length);
+
+		//	lastFingerTime = gameTime;
+		//}
+	}
+	frontCanvas.addEventListener("mousedown", onmousedown);
+	frontCanvas.addEventListener("mousemove", onmousemove);
+	document.addEventListener("mouseup", onmouseup);
+
+	function draw() {
+		// Window
+		ctxFront.drawImage(blurImage, 0, 0);
+
+		ctxFront.globalCompositeOperation = "destination-out";
+
+		var alpha;
+		var ii;
+		for (var i = 0; i < fingerings.length; ++i) {
+			ii = mod(fingerIt + i, fingerings.length);
+			if (fingerings[ii].t > 0) {
+				alpha = fingerings[ii].t/FINGER_TIME;
+
+				ctxFront.beginPath();
+				ctxFront.fillStyle = "rgba(1,1,1,"+alpha+")";
+				ctxFront.arc(fingerings[ii].x, fingerings[ii].y, FINGER_RADIUS, 0, 2 * Math.PI);
+				ctxFront.fill();
+				ctxFront.closePath();
+			}
+		}
+
+		ctxFront.globalCompositeOperation = "source-over";
+
+		ctxFront.drawImage(overlay, 0,0);
+
+		// Background
+		ctxBack.drawImage(background, 0, 0);
+	}
+
+	function loop () {
+		update();
+		draw();
+
+		window.requestAnimFrame(loop);
+	}
+
+	window.requestAnimFrame(loop);
+
+	</script>
+</body>
+</html>

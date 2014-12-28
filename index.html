@@ -3,8 +3,9 @@
 <head>
 	<style> 
 		body {
-			background: #FFFFFF;
-			font-family: "Trebuchet MS", Helvetica, sans-serif
+			background: #000000;
+			font-family: "Trebuchet MS", Helvetica, sans-serif;
+			color: #FFFFFF;
 		}
 
 		canvas {
@@ -16,7 +17,6 @@
 
 		canvas#frontCanvas {
 			z-index: 2;
-			opacity:0.7;
 		}
 
 		canvas#snowCanvas {
@@ -39,9 +39,14 @@
 			height: 600px;
 		}
 
+		div#footer {
+			margin: 0 auto;
+		}
+
 	</style>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<title>Where is Santa?</title>
+	<link rel="shortcut icon" href="santa.ico" >
 </head>
 <body>
 	<div id="holder">
@@ -80,15 +85,46 @@
 
 	var lastTime = Date.now();
 	var gameTime = lastTime / 1000;
-	
+	var finished = false;
+	var finishedTime = 0;
+	var firstTime = true;	
 
-	/** LOAD **/
+	/** RES LOAD **/
 	var blurImage = new Image();
 	blurImage.src = "res/blur.png";
 	var background = new Image();
 	background.src = "res/santa-00.png";
 	var overlay = new Image();
 	overlay.src = "res/santa-07.png";
+	var lastScene = new Image();
+	lastScene.src = "res/last scene.png";
+	var layers = [];
+	layers.push(new Image());
+	layers[0].src = "res/santa-01.png";
+	layers.push(new Image());
+	layers[1].src = "res/santa-02.png";
+	var santa = new Image();
+	santa.src = "res/santa-06.png";	
+	var word = new Image();
+	word.src = "res/word.png"
+	var clickTo = new Image();
+	clickTo.src = "res/click.png";
+	var santaIn = [];
+	santaIn.push(new Image());
+	santaIn[0].src = "res/santa_ani1.png";
+	santaIn.push(new Image());
+	santaIn[1].src = "res/santa_ani2.png";
+	santaIn.push(new Image());
+	santaIn[2].src = "res/santa_ani3.png";
+	var santaAnim = [];
+	santaAnim.push(new Image());
+	santaAnim[0].src = "res/santa_ani4.png";
+	santaAnim.push(new Image());
+	santaAnim[1].src = "res/santa_ani5.png";
+	santaAnim.push(new Image());
+	santaAnim[2].src = "res/santa_ani6.png";
+	santaAnim.push(new Image());
+	santaAnim[3].src = "res/santa_ani7.png";
 
 	/** INIT **/
 
@@ -97,19 +133,15 @@
 
 	ctxFront.fillStyle = "#DDDDFF";
 	ctxFront.drawImage(blurImage, 0, 0);
-	/*
-	ctxFront.fillStyle = "#000000";
-	ctxFront.globalCompositeOperation = "destination-out";
-	ctxFront.fillRect ( 10,10, 200, 200);*/
 
 	// Snow
 	ctxSnow.clearRect(0, 0, WIDTH, HEIGHT);
 
-	//Remove positions
+	// Remove positions
 	var fingerings = [];
 	var fingerIt = 0;
 	var FINGER_TIME = 1.7;
-	var FINGER_RADIUS = 20;
+	var FINGER_RADIUS = 30;
 	for (var i = 0; i < 256; ++i) {
 		fingerings.push({
 			x: 0,
@@ -117,6 +149,48 @@
 			t: 0
 		});
 	}
+	var hit = false;
+	var hitTime = 0;
+	var hitFactor = 0;
+
+	// Santas
+	var IN_TIME = 3;
+	var santas = [{
+		layer: 1,
+		x: WIDTH/2,
+		y: HEIGHT/2,
+		dx: 100,
+		dy: 500
+	},
+	{
+		layer: 1,
+		x: 200,
+		y: 430,
+		dx: -200,
+		dy: 0
+	},
+	{
+		layer: 1,
+		x: 370,
+		y: 370,
+		dx: 500,
+		dy: 0
+	},
+	{
+		layer: 1,
+		x: 100,
+		y: 340,
+		dx: 0,
+		dy: 300
+	},
+	{
+		layer: 0,
+		x: 350,
+		y: 530,
+		dx: 0,
+		dy: 100
+	}];
+	var santaIt = 0;
 
 	function mod (a, b) {
     	return a - b * Math.floor(a / b);
@@ -138,12 +212,35 @@
 		for (var i = 0; i < fingerings.length; ++i) {
 			fingerings[i].t -= deltaTime;
 		}
+
+		if (hit) {
+			hitTime -= deltaTime;
+			hitFactor = 1.0 - hitTime;
+
+			if (hitTime < 0) {
+				hit = false;
+				santaIt++;
+				hitFactor = 0.0;
+
+				if (santaIt == santas.length) {// end
+					finished = true;
+					finishedTime = gameTime;
+				}
+			}
+
+		}
+
 	}
 
 
 	var mouseDown = false;
 	function onmousedown (ev) {
 		mouseDown = true;
+		firstTime = false;
+
+		if (finished && gameTime - finishedTime > 1.0) {
+			window.open("https://twitter.com/MossOfTheTime");
+		}
 
 		newFinger(ev);
 	}
@@ -163,6 +260,11 @@
 		//if (gameTime - lastFingerTime > 0.001) {			
 			var x = ev.offsetX === undefined? ev.layerX : ev.offsetX;
 			var y = ev.offsetY === undefined? ev.layerY : ev.offsetY;
+			if (ev.touches) {
+				var rect = canvas.getBoundingClientRect();
+				x = ev.touches[0].clientX - rect.left;
+				y = ev.touches[0].clientY - rect.top;
+			}
 
 			var f = fingerings[fingerIt];
 			f.x = x;
@@ -173,10 +275,26 @@
 
 		//	lastFingerTime = gameTime;
 		//}
+
+		if (!finished && !hit) {
+			var dx = x - santas[santaIt].x;
+			var dy = y - santas[santaIt].y;
+			if (Math.sqrt(dx*dx + dy*dy) < FINGER_RADIUS) {
+				hit = true;
+				hitTime = 1.0;
+			}			
+		}
 	}
 	frontCanvas.addEventListener("mousedown", onmousedown);
 	frontCanvas.addEventListener("mousemove", onmousemove);
 	document.addEventListener("mouseup", onmouseup);
+	frontCanvas.addEventListener("touchstart", onmousedown);
+	frontCanvas.addEventListener("touchmove", onmousemove);
+	document.addEventListener("touchend", onmouseup);
+
+	function drawSprite(sprite, canvas) {
+		canvas.drawImage(spriteSheet, sprite.sx, sprite.sy, sprite.width, sprite.height, sprite.x, sprite.y, sprite.width, sprite.height);
+	}
 
 	function draw() {
 		// Window
@@ -199,12 +317,56 @@
 			}
 		}
 
+		if (finished) {
+			var finishFactor = Math.min(1.0, (gameTime - finishedTime)/IN_TIME);
+
+			ctxFront.beginPath();
+			ctxFront.fillStyle = "rgba(1,1,1,1";
+			ctxFront.arc(WIDTH/2, HEIGHT/2, (WIDTH/2)*(finishFactor), 0, 2 * Math.PI);
+			ctxFront.fill();
+			ctxFront.closePath();
+		}
+		else if (firstTime) {
+			ctxFront.drawImage(word, 0, -30);
+		}
+
 		ctxFront.globalCompositeOperation = "source-over";
 
-		ctxFront.drawImage(overlay, 0,0);
+		if (firstTime) {
+			ctxFront.drawImage(clickTo, WIDTH/2 - clickTo.width/2, HEIGHT/2 - clickTo.height/2);			
+		}
+
+		if (!finished) {
+			ctxFront.drawImage(overlay, 0,0);
+		}
+		else {
+			ctxFront.drawImage(lastScene, 0,0);
+		}
 
 		// Background
 		ctxBack.drawImage(background, 0, 0);
+
+		for (var i = 0; i < layers.length; ++i) {
+
+			if (!finished && i == santas[santaIt].layer) {
+				ctxBack.drawImage(santa, santas[santaIt].x - santa.width/2 + santas[santaIt].dx*hitFactor, santas[santaIt].y - santa.height/2  + santas[santaIt].dy*hitFactor);
+			}
+
+			ctxBack.drawImage(layers[i], 0, 0);
+		}
+
+		if (finished) {
+			var t = Math.floor((gameTime - finishedTime - IN_TIME) / 1.);
+
+			if (gameTime - finishedTime < IN_TIME) {
+				var aux = Math.floor((gameTime - finishedTime)/IN_TIME * santaIn.length);
+
+				ctxBack.drawImage(santaIn[aux], 0, 0);
+			}
+			else {
+				ctxBack.drawImage(santaAnim[t%4], 0, 0);
+			}
+		}
 	}
 
 	function loop () {

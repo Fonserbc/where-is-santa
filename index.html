@@ -169,7 +169,8 @@
 		"res/santa_ani4.png",
 		"res/santa_ani5.png",
 		"res/santa_ani6.png",
-		"res/santa_ani7.png"
+		"res/santa_ani7.png",
+		"res/thanks.png"
 	];
 	res.downloadAll(init);
 
@@ -193,6 +194,7 @@
 		santaAnim.push(res.get("res/santa_ani5.png"));
 		santaAnim.push(res.get("res/santa_ani6.png"));
 		santaAnim.push(res.get("res/santa_ani7.png"));
+		var thanks = res.get("res/thanks.png");
 
 		/** INIT **/
 
@@ -393,16 +395,19 @@
 			if (finished) {
 				var finishFactor = Math.min(1.0, (gameTime - finishedTime)/IN_TIME);
 
-				if (gameTime - finishedTime > IN_TIME + 3) {
-					console.log("in");
-					finishedFactor = Math.max(0.0, 1.0 - ((gameTime - finishedTime) - (IN_TIME + 3))/IN_TIME);
+				if (gameTime - finishedTime > IN_TIME + 5) {
+					finishFactor = Math.max(0.0, 1.0 - ((gameTime - finishedTime) - (IN_TIME + 5))/IN_TIME);
 				}
 
-				ctxFront.beginPath();
-				ctxFront.fillStyle = "rgba(1,1,1,1";
-				ctxFront.arc(WIDTH/2, HEIGHT/2, (WIDTH/2)*(finishFactor), 0, 2 * Math.PI);
-				ctxFront.fill();
-				ctxFront.closePath();
+				if (finishFactor > 0.0) {
+					ctxFront.beginPath();
+					ctxFront.fillStyle = "rgba(1,1,1,1)";
+					ctxFront.arc(WIDTH/2, HEIGHT/2, (WIDTH/2)*(finishFactor), 0, 2 * Math.PI);
+					ctxFront.fill();
+					ctxFront.closePath();
+				}
+
+				ctxFront.drawImage(thanks, 0, 0);
 			}
 			else if (firstTime) {
 				ctxFront.drawImage(word, 0, -30);

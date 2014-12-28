@@ -47,6 +47,7 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<title>Where is Santa?</title>
 	<link rel="shortcut icon" href="santa.ico" >
+	<audio id="song" src="res/BabyItsColdOutside_MossOfTheTime.mp3" autoplay loop></audio>
 </head>
 <body>
 	<div id="holder">
@@ -60,6 +61,7 @@
 	</div>
 
     <script type="text/javascript">
+
 	window.requestAnimFrame = (function(){
 		return  window.requestAnimationFrame       ||
 			window.webkitRequestAnimationFrame ||
@@ -70,6 +72,59 @@
 				window.setTimeout(callback, 1000 / 60);
 			};
 	})();
+
+	function AssetManager() {
+		this.successCount = 0;
+		this.errorCount = 0;
+		this.cache = {};
+		this.downloadQueue = [];
+	}
+
+	AssetManager.prototype.queueDownload = function(path) {
+		this.downloadQueue.push(path);
+	}
+
+	AssetManager.prototype.downloadAll = function(downloadCallback) {
+		if (this.downloadQueue.length === 0) {
+			downloadCallback();
+		}
+
+		for (var i = 0; i < this.downloadQueue.length; i++) {
+			var path = this.downloadQueue[i];
+			var img = new Image();
+			var that = this;
+			img.addEventListener("load", function() {
+				//console.log(this.src + ' is loaded');
+				that.successCount += 1;
+				if (that.isDone()) {
+					downloadCallback();
+				}
+			}, false);
+			img.addEventListener("error", function() {
+				that.errorCount += 1;
+				if (that.isDone()) {
+					downloadCallback();
+				}
+			}, false);
+			img.src = path;
+			this.cache[path] = img;
+		}
+	}
+
+	AssetManager.prototype.get = function(path) {
+		return this.cache[path];
+	}
+
+	AssetManager.prototype.isDone = function() {
+		return ((this.downloadQueue.length) == this.successCount + this.errorCount);
+	}
+
+	//
+	var song = document.getElementById("song");
+	song.addEventListener("ended", function () {
+		this.stop();
+		this.play();
+	});
 
 	var canvas;
 	var WIDTH, HEIGHT;
@@ -90,294 +145,318 @@
 	var firstTime = true;	
 
 	/** RES LOAD **/
-	var blurImage = new Image();
-	blurImage.src = "res/blur.png";
-	var background = new Image();
-	background.src = "res/santa-00.png";
-	var overlay = new Image();
-	overlay.src = "res/santa-07.png";
-	var lastScene = new Image();
-	lastScene.src = "res/last scene.png";
-	var layers = [];
-	layers.push(new Image());
-	layers[0].src = "res/santa-01.png";
-	layers.push(new Image());
-	layers[1].src = "res/santa-02.png";
-	var santa = new Image();
-	santa.src = "res/santa-06.png";	
-	var word = new Image();
-	word.src = "res/word.png"
-	var clickTo = new Image();
-	clickTo.src = "res/click.png";
-	var santaIn = [];
-	santaIn.push(new Image());
-	santaIn[0].src = "res/santa_ani1.png";
-	santaIn.push(new Image());
-	santaIn[1].src = "res/santa_ani2.png";
-	santaIn.push(new Image());
-	santaIn[2].src = "res/santa_ani3.png";
-	var santaAnim = [];
-	santaAnim.push(new Image());
-	santaAnim[0].src = "res/santa_ani4.png";
-	santaAnim.push(new Image());
-	santaAnim[1].src = "res/santa_ani5.png";
-	santaAnim.push(new Image());
-	santaAnim[2].src = "res/santa_ani6.png";
-	santaAnim.push(new Image());
-	santaAnim[3].src = "res/santa_ani7.png";
+	var loading = new Image();
+	loading.src = "res/loading.png";
 
-	/** INIT **/
+	loading.addEventListener("load", function() {
 
-	ctxBack.clearRect (0, 0, WIDTH, HEIGHT);
-	ctxBack.drawImage (background, 0, 0);
+	ctxFront.drawImage(loading, 0, 0);
 
-	ctxFront.fillStyle = "#DDDDFF";
-	ctxFront.drawImage(blurImage, 0, 0);
+	var res = new AssetManager();
+	res.downloadQueue = [
+		"res/blur.png",
+		"res/santa-00.png",
+		"res/santa-07.png",
+		"res/last scene.png",
+		"res/santa-01.png",
+		"res/santa-02.png",
+		"res/santa-06.png",
+		"res/word.png",
+		"res/click.png",
+		"res/santa_ani1.png",
+		"res/santa_ani2.png",
+		"res/santa_ani3.png",
+		"res/santa_ani4.png",
+		"res/santa_ani5.png",
+		"res/santa_ani6.png",
+		"res/santa_ani7.png"
+	];
+	res.downloadAll(init);
 
-	// Snow
-	ctxSnow.clearRect(0, 0, WIDTH, HEIGHT);
+	function init () {
+		var blurImage = res.get("res/blur.png");
+		var background = res.get("res/santa-00.png");
+		var overlay = res.get("res/santa-07.png");
+		var lastScene = res.get("res/last scene.png");
+		var layers = [];
+		layers.push(res.get("res/santa-01.png"));
+		layers.push(res.get("res/santa-02.png"));
+		var santa = res.get("res/santa-06.png");
+		var word = res.get("res/word.png");
+		var clickTo = res.get("res/click.png");
+		var santaIn = [];
+		santaIn.push(res.get("res/santa_ani1.png"));
+		santaIn.push(res.get("res/santa_ani2.png"));
+		santaIn.push(res.get("res/santa_ani3.png"));
+		var santaAnim = [];
+		santaAnim.push(res.get("res/santa_ani4.png"));
+		santaAnim.push(res.get("res/santa_ani5.png"));
+		santaAnim.push(res.get("res/santa_ani6.png"));
+		santaAnim.push(res.get("res/santa_ani7.png"));
 
-	// Remove positions
-	var fingerings = [];
-	var fingerIt = 0;
-	var FINGER_TIME = 1.7;
-	var FINGER_RADIUS = 30;
-	for (var i = 0; i < 256; ++i) {
-		fingerings.push({
-			x: 0,
-			y: 0,
-			t: 0
-		});
-	}
-	var hit = false;
-	var hitTime = 0;
-	var hitFactor = 0;
+		/** INIT **/
 
-	// Santas
-	var IN_TIME = 3;
-	var santas = [{
-		layer: 1,
-		x: WIDTH/2,
-		y: HEIGHT/2,
-		dx: 100,
-		dy: 500
-	},
-	{
-		layer: 1,
-		x: 200,
-		y: 430,
-		dx: -200,
-		dy: 0
-	},
-	{
-		layer: 1,
-		x: 370,
-		y: 370,
-		dx: 500,
-		dy: 0
-	},
-	{
-		layer: 1,
-		x: 100,
-		y: 340,
-		dx: 0,
-		dy: 300
-	},
-	{
-		layer: 0,
-		x: 350,
-		y: 530,
-		dx: 0,
-		dy: 100
-	}];
-	var santaIt = 0;
+		ctxBack.clearRect (0, 0, WIDTH, HEIGHT);
+		ctxBack.drawImage (background, 0, 0);
 
-	function mod (a, b) {
-    	return a - b * Math.floor(a / b);
-	}
+		ctxFront.fillStyle = "#DDDDFF";
+		ctxFront.drawImage(blurImage, 0, 0);
 
-	// Updates
-	function tickTime() {
-		var currTime = Date.now();
-		var delta = Math.min(0.25, (currTime - lastTime)/1000);
-		lastTime = currTime;
-		gameTime += delta;
-		return delta;
-	}
+		// Snow
+		ctxSnow.clearRect(0, 0, WIDTH, HEIGHT);
 
-	var deltaTime;
-	function update () {
-		deltaTime = tickTime();
+		// Remove positions
+		var fingerings = [];
+		var fingerIt = 0;
+		var FINGER_TIME = 1.7;
+		var FINGER_RADIUS = 30;
+		for (var i = 0; i < 180; ++i) {
+			fingerings.push({
+				x: 0,
+				y: 0,
+				t: 0
+			});
+		}
+		var hit = false;
+		var hitTime = 0;
+		var hitFactor = 0;
 
-		for (var i = 0; i < fingerings.length; ++i) {
-			fingerings[i].t -= deltaTime;
+		// Santas
+		var IN_TIME = 3;
+		var santas = [{
+			layer: 1,
+			x: WIDTH/2,
+			y: HEIGHT/2,
+			dx: 100,
+			dy: 500
+		},
+		{
+			layer: 1,
+			x: 200,
+			y: 430,
+			dx: -200,
+			dy: 0
+		},
+		{
+			layer: 1,
+			x: 370,
+			y: 370,
+			dx: 500,
+			dy: 0
+		},
+		{
+			layer: 1,
+			x: 100,
+			y: 340,
+			dx: 0,
+			dy: 300
+		},
+		{
+			layer: 0,
+			x: 350,
+			y: 530,
+			dx: 0,
+			dy: 100
+		}];
+		var santaIt = 0;
+
+		function mod (a, b) {
+	    	return a - b * Math.floor(a / b);
 		}
 
-		if (hit) {
-			hitTime -= deltaTime;
-			hitFactor = 1.0 - hitTime;
+		// Updates
+		function tickTime() {
+			var currTime = Date.now();
+			var delta = Math.min(0.25, (currTime - lastTime)/1000);
+			lastTime = currTime;
+			gameTime += delta;
+			return delta;
+		}
 
-			if (hitTime < 0) {
-				hit = false;
-				santaIt++;
-				hitFactor = 0.0;
+		var deltaTime;
+		function update () {
+			deltaTime = tickTime();
 
-				if (santaIt == santas.length) {// end
-					finished = true;
-					finishedTime = gameTime;
+			for (var i = 0; i < fingerings.length; ++i) {
+				fingerings[i].t -= deltaTime;
+			}
+
+			if (hit) {
+				hitTime -= deltaTime;
+				hitFactor = 1.0 - hitTime;
+
+				if (hitTime < 0) {
+					hit = false;
+					santaIt++;
+					hitFactor = 0.0;
+
+					if (santaIt == santas.length) {// end
+						finished = true;
+						finishedTime = gameTime;
+					}
+				}
+
+			}
+
+		}
+
+
+		var mouseDown = false;
+		function onmousedown (ev) {
+			mouseDown = true;
+			firstTime = false;
+
+			if (finished && gameTime - finishedTime > 1.0) {
+				var x = ev.offsetX === undefined? ev.layerX : ev.offsetX;
+				var y = ev.offsetY === undefined? ev.layerY : ev.offsetY;
+
+				if (y > 500 && x > 450) {
+					window.open("https://twitter.com/MossOfTheTime");
 				}
 			}
 
-		}
-
-	}
-
-
-	var mouseDown = false;
-	function onmousedown (ev) {
-		mouseDown = true;
-		firstTime = false;
-
-		if (finished && gameTime - finishedTime > 1.0) {
-			window.open("https://twitter.com/MossOfTheTime");
-		}
-
-		newFinger(ev);
-	}
-
-	function onmouseup (ev) {
-		mouseDown = false;
-	}
-
-	function onmousemove (ev) {
-		if (mouseDown) {
 			newFinger(ev);
 		}
-	}
 
-	var lastFingerTime = 0;
-	function newFinger (ev) {
-		//if (gameTime - lastFingerTime > 0.001) {			
-			var x = ev.offsetX === undefined? ev.layerX : ev.offsetX;
-			var y = ev.offsetY === undefined? ev.layerY : ev.offsetY;
-			if (ev.touches) {
-				var rect = canvas.getBoundingClientRect();
-				x = ev.touches[0].clientX - rect.left;
-				y = ev.touches[0].clientY - rect.top;
+		function onmouseup (ev) {
+			mouseDown = false;
+		}
+
+		function onmousemove (ev) {
+			if (mouseDown) {
+				newFinger(ev);
+			}
+		}
+
+		var lastFingerTime = 0;
+		function newFinger (ev) {
+			//if (gameTime - lastFingerTime > 0.001) {			
+				var x = ev.offsetX === undefined? ev.layerX : ev.offsetX;
+				var y = ev.offsetY === undefined? ev.layerY : ev.offsetY;
+				if (ev.touches) {
+					var rect = canvas.getBoundingClientRect();
+					x = ev.touches[0].clientX - rect.left;
+					y = ev.touches[0].clientY - rect.top;
+				}
+
+				var f = fingerings[fingerIt];
+				f.x = x;
+				f.y = y;
+				f.t = FINGER_TIME;
+
+				fingerIt = mod(fingerIt + 1, fingerings.length);
+
+			//	lastFingerTime = gameTime;
+			//}
+
+			if (!finished && !hit) {
+				var dx = x - santas[santaIt].x;
+				var dy = y - santas[santaIt].y;
+				if (Math.sqrt(dx*dx + dy*dy) < FINGER_RADIUS) {
+					hit = true;
+					hitTime = 1.0;
+				}			
+			}
+		}
+		frontCanvas.addEventListener("mousedown", onmousedown);
+		frontCanvas.addEventListener("mousemove", onmousemove);
+		document.addEventListener("mouseup", onmouseup);
+		frontCanvas.addEventListener("touchstart", onmousedown);
+		frontCanvas.addEventListener("touchmove", onmousemove);
+		document.addEventListener("touchend", onmouseup);
+
+		function drawSprite(sprite, canvas) {
+			canvas.drawImage(spriteSheet, sprite.sx, sprite.sy, sprite.width, sprite.height, sprite.x, sprite.y, sprite.width, sprite.height);
+		}
+
+		function draw() {
+			// Window
+			ctxFront.drawImage(blurImage, 0, 0);
+
+			ctxFront.globalCompositeOperation = "destination-out";
+
+			var alpha;
+			var ii;
+			for (var i = 0; i < fingerings.length; ++i) {
+				ii = mod(fingerIt + i, fingerings.length);
+				if (fingerings[ii].t > 0) {
+					alpha = fingerings[ii].t/FINGER_TIME;
+
+					ctxFront.beginPath();
+					ctxFront.fillStyle = "rgba(1,1,1,"+alpha+")";
+					ctxFront.arc(fingerings[ii].x, fingerings[ii].y, FINGER_RADIUS, 0, 2 * Math.PI);
+					ctxFront.fill();
+					ctxFront.closePath();
+				}
 			}
 
-			var f = fingerings[fingerIt];
-			f.x = x;
-			f.y = y;
-			f.t = FINGER_TIME;
+			if (finished) {
+				var finishFactor = Math.min(1.0, (gameTime - finishedTime)/IN_TIME);
 
-			fingerIt = mod(fingerIt + 1, fingerings.length);
-
-		//	lastFingerTime = gameTime;
-		//}
-
-		if (!finished && !hit) {
-			var dx = x - santas[santaIt].x;
-			var dy = y - santas[santaIt].y;
-			if (Math.sqrt(dx*dx + dy*dy) < FINGER_RADIUS) {
-				hit = true;
-				hitTime = 1.0;
-			}			
-		}
-	}
-	frontCanvas.addEventListener("mousedown", onmousedown);
-	frontCanvas.addEventListener("mousemove", onmousemove);
-	document.addEventListener("mouseup", onmouseup);
-	frontCanvas.addEventListener("touchstart", onmousedown);
-	frontCanvas.addEventListener("touchmove", onmousemove);
-	document.addEventListener("touchend", onmouseup);
-
-	function drawSprite(sprite, canvas) {
-		canvas.drawImage(spriteSheet, sprite.sx, sprite.sy, sprite.width, sprite.height, sprite.x, sprite.y, sprite.width, sprite.height);
-	}
-
-	function draw() {
-		// Window
-		ctxFront.drawImage(blurImage, 0, 0);
-
-		ctxFront.globalCompositeOperation = "destination-out";
-
-		var alpha;
-		var ii;
-		for (var i = 0; i < fingerings.length; ++i) {
-			ii = mod(fingerIt + i, fingerings.length);
-			if (fingerings[ii].t > 0) {
-				alpha = fingerings[ii].t/FINGER_TIME;
+				if (gameTime - finishedTime > IN_TIME + 3) {
+					console.log("in");
+					finishedFactor = Math.max(0.0, 1.0 - ((gameTime - finishedTime) - (IN_TIME + 3))/IN_TIME);
+				}
 
 				ctxFront.beginPath();
-				ctxFront.fillStyle = "rgba(1,1,1,"+alpha+")";
-				ctxFront.arc(fingerings[ii].x, fingerings[ii].y, FINGER_RADIUS, 0, 2 * Math.PI);
+				ctxFront.fillStyle = "rgba(1,1,1,1";
+				ctxFront.arc(WIDTH/2, HEIGHT/2, (WIDTH/2)*(finishFactor), 0, 2 * Math.PI);
 				ctxFront.fill();
 				ctxFront.closePath();
 			}
-		}
-
-		if (finished) {
-			var finishFactor = Math.min(1.0, (gameTime - finishedTime)/IN_TIME);
-
-			ctxFront.beginPath();
-			ctxFront.fillStyle = "rgba(1,1,1,1";
-			ctxFront.arc(WIDTH/2, HEIGHT/2, (WIDTH/2)*(finishFactor), 0, 2 * Math.PI);
-			ctxFront.fill();
-			ctxFront.closePath();
-		}
-		else if (firstTime) {
-			ctxFront.drawImage(word, 0, -30);
-		}
-
-		ctxFront.globalCompositeOperation = "source-over";
-
-		if (firstTime) {
-			ctxFront.drawImage(clickTo, WIDTH/2 - clickTo.width/2, HEIGHT/2 - clickTo.height/2);			
-		}
-
-		if (!finished) {
-			ctxFront.drawImage(overlay, 0,0);
-		}
-		else {
-			ctxFront.drawImage(lastScene, 0,0);
-		}
-
-		// Background
-		ctxBack.drawImage(background, 0, 0);
-
-		for (var i = 0; i < layers.length; ++i) {
-
-			if (!finished && i == santas[santaIt].layer) {
-				ctxBack.drawImage(santa, santas[santaIt].x - santa.width/2 + santas[santaIt].dx*hitFactor, santas[santaIt].y - santa.height/2  + santas[santaIt].dy*hitFactor);
+			else if (firstTime) {
+				ctxFront.drawImage(word, 0, -30);
 			}
 
-			ctxBack.drawImage(layers[i], 0, 0);
-		}
+			ctxFront.globalCompositeOperation = "source-over";
 
-		if (finished) {
-			var t = Math.floor((gameTime - finishedTime - IN_TIME) / 1.);
+			if (firstTime) {
+				ctxFront.drawImage(clickTo, WIDTH/2 - clickTo.width/2, HEIGHT/2 - clickTo.height/2);			
+			}
 
-			if (gameTime - finishedTime < IN_TIME) {
-				var aux = Math.floor((gameTime - finishedTime)/IN_TIME * santaIn.length);
-
-				ctxBack.drawImage(santaIn[aux], 0, 0);
+			if (!finished) {
+				ctxFront.drawImage(overlay, 0,0);
 			}
 			else {
-				ctxBack.drawImage(santaAnim[t%4], 0, 0);
+				ctxFront.drawImage(lastScene, 0,0);
+			}
+
+			// Background
+			ctxBack.drawImage(background, 0, 0);
+
+			for (var i = 0; i < layers.length; ++i) {
+
+				if (!finished && i == santas[santaIt].layer) {
+					ctxBack.drawImage(santa, santas[santaIt].x - santa.width/2 + santas[santaIt].dx*hitFactor, santas[santaIt].y - santa.height/2  + santas[santaIt].dy*hitFactor);
+				}
+
+				ctxBack.drawImage(layers[i], 0, 0);
+			}
+
+			if (finished) {
+				var t = Math.floor((gameTime - finishedTime - IN_TIME) / 1.);
+
+				if (gameTime - finishedTime < IN_TIME) {
+					var aux = Math.floor((gameTime - finishedTime)/IN_TIME * santaIn.length);
+
+					ctxBack.drawImage(santaIn[aux], 0, 0);
+				}
+				else {
+					ctxBack.drawImage(santaAnim[t%4], 0, 0);
+				}
 			}
 		}
-	}
 
-	function loop () {
-		update();
-		draw();
+		function loop () {
+			update();
+			draw();
+
+			window.requestAnimFrame(loop);
+		}
 
 		window.requestAnimFrame(loop);
 	}
-
-	window.requestAnimFrame(loop);
-
+	});
 	</script>
 </body>
 </html>

@@ -393,7 +393,7 @@
 			}
 
 			if (finished) {
-				var finishFactor = Math.min(1.0, (gameTime - finishedTime)/IN_TIME);
+				var finishFactor = Math.min(1.0, (gameTime - finishedTime)/IN_TIME) + 0.01;
 
 				if (gameTime - finishedTime > IN_TIME + 5) {
 					finishFactor = Math.max(0.0, 1.0 - ((gameTime - finishedTime) - (IN_TIME + 5))/IN_TIME);
@@ -406,8 +406,9 @@
 					ctxFront.fill();
 					ctxFront.closePath();
 				}
-
-				ctxFront.drawImage(thanks, 0, 0);
+				else {
+					ctxFront.drawImage(thanks, 0, 0);
+				}
 			}
 			else if (firstTime) {
 				ctxFront.drawImage(word, 0, -30);

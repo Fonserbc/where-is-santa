@@ -12,6 +12,12 @@
 			font-family: "Trebuchet MS", Helvetica, sans-serif;
 			color: #FFFFFF;
 		}
+		body.noScroll {
+			overflow: hidden;
+		}
+		body.dialogShowing {
+			overflow: hidden;
+		}
 
 		canvas {
 		    display: block;
@@ -66,6 +72,10 @@
 	</div>
 
     <script type="text/javascript">
+
+	document.body.addEventListener('touchmove', function(e) {
+		e.preventDefault();
+	}, false);
 
 	window.requestAnimFrame = (function(){
 		return  window.requestAnimationFrame       ||

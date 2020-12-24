@@ -135,8 +135,8 @@
 	}
 
 	//
-	var song = document.getElementById("song");
-	song.addEventListener("ended", function () {
+	window.song = document.getElementById("song");
+	window.song.addEventListener("ended", function () {
 		this.stop();
 		this.play();
 	});
@@ -321,6 +321,10 @@
 		var mouseDown = false;
 		function onmousedown (ev) {
 			mouseDown = true;
+
+			if (firstTime) {
+				window.song.play();
+			}
 			firstTime = false;
 
 			if (finished && gameTime - finishedTime > 1.0) {
